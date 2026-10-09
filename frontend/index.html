@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PayFlow Pro | Enterprise Invoicing &amp; Financial Ledger</title>
+  <!-- Tailwind CSS CDN for instant presentation without npm compile blockers -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel Standalone for inline JSX compilation -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #0b0f17; color: #f8fafc; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    const API_BASE = "http://localhost:8000/api/v1";
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('invoices');
+      const [stats, setStats] = useState({
+        total_revenue: 870000,
+        total_outstanding: 1624000,
+        total_invoices: 3,
+        paid_count: 1,
+        issued_count: 1,
+        overdue_count: 1,
+        currency: 'PKR'
+      });
+      const [invoices, setInvoices] = useState([
+        {
+          id: 1,
+          invoice_number: "INV-2026-0001",
+          client: { company: "Systems Limited", name: "Asif Peer" },
+          status: "PAID",
+          issue_date: "2026-09-20",
+          due_date: "2026-10-05",
+          currency: "PKR",
+          subtotal: 750000,
+          tax_amount: 120000,
+          total_amount: 870000
+        },
+        {
+          id: 2,
+          invoice_number: "INV-2026-0002",
+          client: { company: "Jazz Telecom (PMCL)", name: "Aamir Ibrahim" },
+          status: "ISSUED",
+          issue_date: "2026-10-05",
+          due_date: "2026-10-25",
+          currency: "PKR",
+          subtotal: 480000,
+          tax_amount: 76800,
+          total_amount: 556800
+        },
+        {
+          id: 3,
+          invoice_number: "INV-2026-0003",
+          client: { company: "Arbisoft Technologies", name: "Yasser Bashir" },
+          status: "OVERDUE",
+          issue_date: "2026-08-30",
+          due_date: "2026-09-30",
+          currency: "PKR",
+          subtotal: 920000,
+          tax_amount: 147200,
+          total_amount: 1067200
+        }
+      ]);
+
+      const [clients, setClients] = useState([
+        { id: 1, company: "Systems Limited", name: "Asif Peer", email: "accounts@systemsltd.com", phone: "+92-42-111-797-836", tax_id: "NTN-0814920-1" },
+        { id: 2, company: "Jazz Telecom (PMCL)", name: "Aamir Ibrahim", email: "procurement@jazz.com.pk", phone: "+92-51-111-300-300", tax_id: "NTN-0710123-4" },
+        { id: 3, company: "Arbisoft Technologies", name: "Yasser Bashir", email: "billing@arbisoft.com", phone: "+92-42-35954601", tax_id: "NTN-2938472-8" },
+        { id: 4, company: "10Pearls Pakistan", name: "Zeeshan Aftab", email: "finance.pk@10pearls.com", phone: "+92-21-34328571", tax_id: "NTN-3849102-5" }
+      ]);
+
+      const [showModal, setShowModal] = useState(false);
+      const [newInvoice, setNewInvoice] = useState({
+        client_id: 1,
+        due_date: "2026-11-15",
+        tax_rate: 0.16,
+        notes: "Standard Net-30 remittance terms via 1Link/RAAST",
+        items: [{ description: "Cloud Infrastructure & Backend Sprint", quantity: 1, unit_price: 250000 }]
+      });
+
+      // Try fetching live data if FastAPI server is running
+      useEffect(() => {
+        fetch(`${API_BASE}/analytics/summary`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => { if (data) setStats(data); })
+          .catch(() => console.log("Using cached fixtures"));
+
+        fetch(`${API_BASE}/invoices/`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => { if (data && data.length) setInvoices(data); })
+          .catch(() => {});
+      }, []);
+
+      const handleAddItem = () => {
+        setNewInvoice({
+          ...newInvoice,
+          items: [...newInvoice.items, { description: "", quantity: 1, unit_price: 0 }]
+        });
+      };
+
+      const handleItemChange = (index, field, value) => {
+        const updated = [...newInvoice.items];
+        updated[index][field] = field === 'description' ? value : parseFloat(value) || 0;
+        setNewInvoice({ ...newInvoice, items: updated });
+      };
+
+      const handleCreateInvoice = (e) => {
+        e.preventDefault();
+        const subtotal = newInvoice.items.reduce((acc, i) => acc + (i.quantity * i.unit_price), 0);
+        const tax = Math.round(subtotal * newInvoice.tax_rate);
+        const total = subtotal + tax;
+        const selectedClient = clients.find(c => c.id === parseInt(newInvoice.client_id)) || clients[0];
+
+        const created = {
+          id: invoices.length + 1,
+          invoice_number: `INV-2026-000${invoices.length + 1}`,
+          client: selectedClient,
+          status: "ISSUED",
+          issue_date: new Date().toISOString().split('T')[0],
+          due_date: newInvoice.due_date,
+          currency: "PKR",
+          subtotal: subtotal,
+          tax_amount: tax,
+          total_amount: total
+        };
+
+        setInvoices([created, ...invoices]);
+        setStats(prev => ({
+          ...prev,
+          total_invoices: prev.total_invoices + 1,
+          total_outstanding: prev.total_outstanding + total,
+          issued_count: prev.issued_count + 1
+        }));
+        setShowModal(false);
+      };
+
+      const markAsPaid = (id) => {
+        setInvoices(invoices.map(inv => {
+          if (inv.id === id) {
+            return { ...inv, status: 'PAID' };
+          }
+          return inv;
+        }));
+      };
+
+      return (
+        <div className="min-h-screen flex flex-col bg-[#090d14] text-slate-100">
+          {/* Header */}
+          <header className="border-b border-slate-800 bg-[#0e1422]/90 backdrop-blur sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold font-mono text-white text-lg shadow-lg shadow-cyan-500/20">
+                P
+              </div>
+              <div>
+                <h1 className="text-lg font-bold tracking-tight">PayFlow <span className="text-cyan-400">Pro</span></h1>
+                <p className="text-xs text-slate-400 font-mono">B2B Financial Ledger &amp; Invoicing Engine</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-mono px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                API: Python (FastAPI) • Node Worker Active
+              </span>
+              <button 
+                onClick={() => setShowModal(true)}
+                className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium text-sm px-4 py-2 rounded-lg shadow-lg shadow-cyan-500/25 transition">
+                + Create Invoice
+              </button>
+            </div>
+          </header>
+
+          {/* Main Body */}
+          <main className="flex-1 max-w-7xl w-full mx-auto p-6">
+            {/* KPI Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <div className="bg-[#121929] border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Settled Revenue</span>
+                <div className="text-2xl font-bold font-mono text-emerald-400 mt-2">
+                  PKR {stats.total_revenue.toLocaleString()}
+                </div>
+                <span className="text-xs text-slate-500 mt-1 block">Verified via RAAST / IBFT</span>
+              </div>
+
+              <div className="bg-[#121929] border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Outstanding Accounts</span>
+                <div className="text-2xl font-bold font-mono text-cyan-400 mt-2">
+                  PKR {stats.total_outstanding.toLocaleString()}
+                </div>
+                <span className="text-xs text-slate-500 mt-1 block">Receivables in Aging Queue</span>
+              </div>
+
+              <div className="bg-[#121929] border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Total Invoices</span>
+                <div className="text-2xl font-bold font-mono text-white mt-2">
+                  {stats.total_invoices}
+                </div>
+                <span className="text-xs text-slate-500 mt-1 block">{stats.paid_count} Paid • {stats.issued_count} Active</span>
+              </div>
+
+              <div className="bg-[#121929] border border-slate-800 p-5 rounded-xl shadow-lg">
+                <span className="text-xs font-mono text-slate-400 uppercase tracking-wider">Overdue Alert</span>
+                <div className="text-2xl font-bold font-mono text-rose-400 mt-2">
+                  {stats.overdue_count} Invoices
+                </div>
+                <span className="text-xs text-rose-500/80 mt-1 block">Requires Remittance Follow-Up</span>
+              </div>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-slate-800 gap-6 mb-6 font-medium text-sm">
+              <button 
+                onClick={() => setActiveTab('invoices')}
+                className={`pb-3 transition ${activeTab === 'invoices' ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-slate-400 hover:text-white'}`}>
+                Invoices Ledger
+              </button>
+              <button 
+                onClick={() => setActiveTab('clients')}
+                className={`pb-3 transition ${activeTab === 'clients' ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-slate-400 hover:text-white'}`}>
+                Enterprise Clients ({clients.length})
+              </button>
+            </div>
+
+            {/* Invoices Table View */}
+            {activeTab === 'invoices' && (
+              <div className="bg-[#121929] border border-slate-800 rounded-xl overflow-hidden shadow-xl">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[#162035] text-xs font-mono text-slate-400 uppercase border-b border-slate-800">
+                    <tr>
+                      <th className="px-6 py-4">Invoice #</th>
+                      <th className="px-6 py-4">Billed Corporate Client</th>
+                      <th className="px-6 py-4">Due Date</th>
+                      <th className="px-6 py-4">Amount</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 font-sans">
+                    {invoices.map(inv => (
+                      <tr key={inv.id} className="hover:bg-slate-800/40 transition">
+                        <td className="px-6 py-4 font-mono font-semibold text-cyan-400">{inv.invoice_number}</td>
+                        <td className="px-6 py-4">
+                          <div className="font-semibold text-white">{inv.client.company}</div>
+                          <div className="text-xs text-slate-400">Attn: {inv.client.name}</div>
+                        </td>
+                        <td className="px-6 py-4 text-slate-300 font-mono text-xs">{inv.due_date}</td>
+                        <td className="px-6 py-4 font-mono font-bold text-white">
+                          PKR {inv.total_amount.toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded text-xs font-mono font-bold ${
+                            inv.status === 'PAID' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            inv.status === 'ISSUED' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+                            'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          }`}>
+                            {inv.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right space-x-2">
+                          {inv.status !== 'PAID' && (
+                            <button 
+                              onClick={() => markAsPaid(inv.id)}
+                              className="text-xs bg-slate-800 hover:bg-emerald-600 hover:text-white px-2.5 py-1 rounded font-mono transition">
+                              Mark Paid
+                            </button>
+                          )}
+                          <a 
+                            href={`http://localhost:8000/api/v1/invoices/${inv.id}/pdf`}
+                            target="_blank"
+                            className="text-xs bg-slate-800 hover:bg-cyan-600 hover:text-white px-2.5 py-1 rounded font-mono transition inline-block">
+                            PDF ↗
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Clients Directory View */}
+            {activeTab === 'clients' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {clients.map(c => (
+                  <div key={c.id} className="bg-[#121929] border border-slate-800 p-5 rounded-xl shadow-lg">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-bold text-base text-white">{c.company}</h3>
+                        <p className="text-xs text-slate-400 mt-0.5">Primary Contact: {c.name}</p>
+                      </div>
+                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                        {c.tax_id}
+                      </span>
+                    </div>
+                    <div className="mt-4 text-xs font-mono space-y-1 text-slate-300">
+                      <div>✉️ {c.email}</div>
+                      <div>📞 {c.phone}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </main>
+
+          {/* Modal: Create Invoice */}
+          {showModal && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+              <div className="bg-[#121929] border border-slate-800 rounded-xl max-w-xl w-full p-6 shadow-2xl">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
+                  <h3 className="font-bold text-lg text-white">Create B2B Invoice</h3>
+                  <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                
+                <form onSubmit={handleCreateInvoice} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Select Client</label>
+                    <select 
+                      value={newInvoice.client_id}
+                      onChange={e => setNewInvoice({...newInvoice, client_id: e.target.value})}
+                      className="w-full bg-[#182238] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>{c.company} ({c.name})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-mono text-slate-400 mb-1">Due Date</label>
+                    <input 
+                      type="date" 
+                      value={newInvoice.due_date}
+                      onChange={e => setNewInvoice({...newInvoice, due_date: e.target.value})}
+                      className="w-full bg-[#182238] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400"
+                    />
+                  </div>
+
+                  {/* Line Items */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs font-mono text-slate-400">Line Items</label>
+                      <button 
+                        type="button" 
+                        onClick={handleAddItem}
+                        className="text-xs text-cyan-400 hover:underline">
+                        + Add Line Item
+                      </button>
+                    </div>
+
+                    {newInvoice.items.map((item, idx) => (
+                      <div key={idx} className="flex gap-2 mb-2">
+                        <input 
+                          type="text" 
+                          placeholder="Description (e.g. Cloud Consultation)" 
+                          value={item.description}
+                          onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                          required
+                          className="flex-1 bg-[#182238] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white"
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="Qty" 
+                          value={item.quantity}
+                          onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
+                          required
+                          className="w-16 bg-[#182238] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white"
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="Price (PKR)" 
+                          value={item.unit_price}
+                          onChange={e => handleItemChange(idx, 'unit_price', e.target.value)}
+                          required
+                          className="w-28 bg-[#182238] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-slate-800 pt-3 flex justify-end gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => setShowModal(false)}
+                      className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-sm hover:bg-slate-700">
+                      Cancel
+                    </button>
+                    <button 
+                      type="submit" 
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-medium text-sm hover:from-cyan-400 hover:to-blue-500">
+                      Issue &amp; Save Invoice
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

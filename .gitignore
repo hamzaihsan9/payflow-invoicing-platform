@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.db
+*.sqlite3
+
+# Node & Frontend
+node_modules/
+dist/
+build/
+.npm
+.eslintcache
+
+# Environment & Secrets
+.env
+.env.local
+
+# IDEs & System
+.vscode/
+.idea/
+.DS_Store
+*.log
