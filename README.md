@@ -1,111 +1,156 @@
-# PayFlow Pro — Enterprise Multi-Tenant Invoicing & Financial Ledger Platform
+<p align="center">
+  <img src="assets/logo.svg" alt="PayFlow Enterprise" width="460" />
+</p>
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
-[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?style=flat&logo=python)](https://www.python.org/)
-[![React](https://img.shields.io/badge/React-18.2-61DAFB?style=flat&logo=react)](https://react.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-20.0-339933?style=flat&logo=nodedotjs)](https://nodejs.org/)
-[![Vue.js](https://img.shields.io/badge/Vue.js-3.0-4FC08D?style=flat&logo=vuedotjs)](https://vuejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16.0-4169E1?style=flat&logo=postgresql)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=flat&logo=docker)](https://www.docker.com/)
+# PayFlow — Enterprise Invoicing & Receivables Platform
 
-**PayFlow Pro** is a production-grade B2B multi-tenant financial operations and invoicing platform architected for corporate IT and enterprise compliance standards (FBR/PRA compliant tax workflows, multi-currency receivables, and automated remittance reconciliation via 1Link/RAAST).
+PayFlow is a multi-tenant invoicing and financial operations platform built with Python (FastAPI), PostgreSQL, and a Node.js background event worker. It provides automated tax compliance (Punjab Revenue Authority PRA 16% sales tax on services), itemized PDF invoice streaming via ReportLab, immutable audit trail logging, and multi-entity payment reconciliation.
+
+The platform includes an administrative receivables dashboard built in React 18, a customer remittance portal built in Vue 3, and containerized deployment manifests for Docker Compose.
 
 ---
 
-## 🏗️ System Architecture
+## Architecture
+
+The system follows a polyglot microservice layout separating synchronous financial API operations from asynchronous webhook event dispatching.
 
 ```mermaid
-graph TD
-    ClientBrowser["Client Browser (React 18 Dashboard / Vue Portal)"]
+flowchart LR
+    Client["Browser / Single Page App\n(React 18 Dashboard / Vue 3 Portal)"]
     
-    subgraph "API Gateway & Application Tier"
-        FastAPI["Python FastAPI Service (:8000)<br/>• Async REST Endpoints<br/>• Pydantic v2 Schemas<br/>• JWT OAuth2 Auth & RBAC"]
-        NodeWorker["Node.js Worker Service (:5001)<br/>• Webhook Dispatcher<br/>• Asynchronous Event Bus"]
-    end
-    
-    subgraph "Persistence Tier"
-        Postgres[("PostgreSQL 16 Database<br/>• Invoices & Clients<br/>• Audit Trail Logs")]
-        Redis[("Redis 7 Cache<br/>• Rate Limiting<br/>• Session Blacklist")]
+    subgraph CoreServices ["Core Services"]
+        API["FastAPI Backend (:8000)\n• REST Routing & Validation\n• ReportLab PDF Streaming\n• RBAC & Audit Ledger"]
+        Worker["Node.js Event Bus (:5001)\n• Webhook Dispatcher\n• Asynchronous Event Engine"]
     end
 
-    ClientBrowser -->|HTTP / JSON| FastAPI
-    ClientBrowser -->|Self-Service View| NodeWorker
-    FastAPI -->|Async Webhook| NodeWorker
-    FastAPI -->|SQLAlchemy ORM| Postgres
-    FastAPI -->|Session Tokens| Redis
+    subgraph DataTier ["Persistence Tier"]
+        DB[("PostgreSQL 16 / SQLite\n• Invoices & Clients\n• Audit Records")]
+        Cache[("Redis 7 Cache\n• Rate Limits & Pub/Sub")]
+    end
+
+    Client -->|REST JSON / PDF Streams| API
+    Client -->|Remittance Acknowledgment| Worker
+    API -->|HTTP Webhook POST| Worker
+    API -->|SQLAlchemy 2.0 ORM| DB
+    API -->|Session Tokens| Cache
+```
+
+### Components
+
+- **Core Backend (`backend/`)**: Python 3.11+ using FastAPI, Pydantic v2, and SQLAlchemy. Handles invoicing math, tax computations, ReportLab PDF generation, and database migrations.
+- **Event Worker (`worker-service/`)**: Zero-dependency Node.js HTTP service listening on port `5001`. Ingests webhook events from FastAPI and processes background delivery.
+- **Administrative Ledger (`frontend/index.html`)**: React 18 single-page application modeled after modern financial dashboards (Linear/Stripe aesthetic), featuring receivables aging, status filters, itemized invoice creation, and PDF viewer integration.
+- **Client Settlement Portal (`client-portal-vue/index.html`)**: Lightweight Vue 3 interface for counterparty invoice verification and RAAST / IBFT bank remittance acknowledgment.
+
+---
+
+## Technical Features
+
+### Automated Tax & Billing Calculations
+- Computes line-item totals, applicable sales tax (PRA 16%), and net payable balances with floating-point precision guards.
+- Formats monetary amounts in Pakistani Rupee (PKR) and foreign currency denominations.
+
+### Corporate Tax Invoice Generation
+- Dynamic PDF generation via ReportLab streaming directly over HTTP with `Content-Disposition: inline` for immediate browser preview.
+- Incorporates registered NTN, STRN, line-item breakdowns, Punjab Revenue Authority compliance metadata, and banking remittance instructions (Habib Bank Limited IBAN and RAAST Instant ID).
+
+### Audit Trail & Regulatory Compliance
+- Every state mutation (invoice issuance, status transition, payment confirmation) writes an immutable record to the `audit_logs` table.
+- Accessible through the administrative compliance tab and REST endpoint `GET /api/v1/audit/`.
+
+### Polyglot Event Bus
+- When an invoice is created or marked as paid, FastAPI asynchronously notifies the Node.js event engine over HTTP.
+- Ensures decouple operations between the primary database transaction and external notification hooks.
+
+---
+
+## Project Structure
+
+```
+payflow-invoicing-platform/
+├── assets/
+│   ├── logo.svg               # Vector brand banner
+│   ├── icon.svg               # Standalone mark
+│   └── logo.png               # High-res rendered banner
+├── backend/
+│   ├── app/
+│   │   ├── models/            # SQLAlchemy database entities (Invoice, Client, Payment, User)
+│   │   ├── schemas/           # Pydantic v2 validation models
+│   │   ├── routers/           # API routes (auth, invoices, clients, analytics, audit)
+│   │   ├── services/          # Business logic (PDF generator, auth, event dispatcher)
+│   │   ├── config.py          # Environment settings
+│   │   ├── database.py        # SQLAlchemy session & engine setup
+│   │   └── main.py            # FastAPI application factory & CORS setup
+│   ├── seed_data.py           # Database seeder with realistic corporate accounts
+│   ├── requirements.txt       # Python dependencies
+│   └── Dockerfile
+├── frontend/
+│   ├── index.html             # React 18 administrative ledger
+│   ├── assets/                # App icons and SVG assets
+│   └── Dockerfile
+├── client-portal-vue/
+│   └── index.html             # Vue 3 counterparty remittance interface
+├── worker-service/
+│   ├── server.js              # Node.js event bus microservice
+│   └── Dockerfile
+├── docker-compose.yml         # Multi-container orchestration definition
+└── README.md
 ```
 
 ---
 
-## 🌟 Key Technical Features
+## Quickstart
 
-### 1. High-Performance Core (Python & FastAPI)
-- **Asynchronous Execution:** Async request handling powered by Starlette and Uvicorn.
-- **Enterprise Security:** JWT bearer token authentication with role-based access control (`ADMIN`, `FINANCE_MANAGER`, `AUDITOR`, `CLIENT`).
-- **Audit Logging:** Every financial transaction, status transition, and client creation is recorded in an immutable audit ledger table.
-- **Branded PDF Generation:** Automated invoice generation using `reportlab`.
+### Option 1: Docker Compose (All Services)
 
-### 2. Polyglot Microservices Integration (Node.js)
-- Asynchronous webhook processor handling `INVOICE_CREATED` and `PAYMENT_RECEIVED` background workflows.
-- Native HTTP event store decoupled from the main database transaction loop.
-
-### 3. Modern Multi-Client Frontend (React 18 & Vue 3)
-- **React 18 Operations Dashboard:** Financial KPI cards (Settled vs Outstanding Revenue), interactive invoice builder with live tax calculation, and client directory.
-- **Vue 3 Customer Portal:** Lightweight customer self-service interface for reviewing and settling invoices.
-
-### 4. Database & Persistence (PostgreSQL & Redis)
-- Normalized relational schema supporting Clients, Invoices, Line Items, Payments, and Audit Logs.
-- Zero-downtime containerized volume persistence in Docker Compose.
-
----
-
-## 🚀 Quick Start Guide
-
-### Option A: Complete Docker Compose Deployment (Recommended)
-
-Boot the entire polyglot stack (PostgreSQL, Redis, Python FastAPI, Node Worker, React Frontend) with one command:
+Run the full polyglot stack (Postgres 16, Redis 7, Python FastAPI, Node.js Worker, React Nginx):
 
 ```bash
-# Clone the repository
 git clone https://github.com/hamzaihsan9/payflow-invoicing-platform.git
 cd payflow-invoicing-platform
 
-# Spin up all microservices
 docker compose up -d --build
 ```
 
-Access services:
-- **React Enterprise Dashboard:** `http://localhost:3000`
-- **FastAPI Interactive Docs (Swagger):** `http://localhost:8000/docs`
-- **FastAPI ReDoc:** `http://localhost:8000/redoc`
-- **Node.js Event Worker:** `http://localhost:5001/health`
+Service endpoints:
+- **Operations Dashboard**: http://localhost:3000
+- **FastAPI API & Docs**: http://localhost:8000/docs
+- **Node Event Worker**: http://localhost:5001/health
 
 ---
 
-### Option B: Local Standalone Development
+### Option 2: Local Development Setup
 
-#### 1. Backend (Python)
+#### 1. Backend Service (FastAPI)
+
 ```bash
 cd backend
+
+# Create and activate virtual environment
 python3 -m venv venv
 source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 
-# Seed initial admin and corporate clients (Systems Ltd, Jazz, Arbisoft, 10Pearls)
+# Seed corporate test accounts (Systems Ltd, Jazz Telecom, Arbisoft, 10Pearls)
 python seed_data.py
 
-# Launch FastAPI server
-uvicorn app.main:app --reload --port 8000
+# Start development server
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 #### 2. Node.js Event Worker
+
 ```bash
 cd worker-service
 node server.js
 ```
 
-#### 3. Frontend (React)
-Open `frontend/index.html` directly in your browser or serve via:
+#### 3. Administrative Dashboard
+
+Open `frontend/index.html` directly in any web browser, or serve it with Python's static server:
+
 ```bash
 cd frontend
 python3 -m http.server 3000
@@ -113,18 +158,58 @@ python3 -m http.server 3000
 
 ---
 
-## 🔐 Default Seed Credentials
+## API Reference
 
-| Role | Email | Password | Access Level |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@payflow.pk` | `Admin@123456` | Full System Access & Audit Logs |
-| **Finance Manager** | `finance@payflow.pk` | `Finance@123456` | Invoices, Clients & Payments |
+The interactive Swagger UI is available at `http://localhost:8000/docs`.
+
+### Primary Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/invoices/` | List all invoices with optional client and status filters |
+| `POST` | `/api/v1/invoices/` | Create a new invoice and dispatch webhook event |
+| `GET` | `/api/v1/invoices/{id}` | Retrieve itemized invoice details |
+| `GET` | `/api/v1/invoices/{id}/pdf` | Stream ReportLab corporate tax invoice PDF |
+| `PATCH` | `/api/v1/invoices/{id}/status` | Update invoice status (`PAID`, `OVERDUE`, `ISSUED`) |
+| `POST` | `/api/v1/invoices/{id}/payments` | Record payment transaction and recompute ledger |
+| `GET` | `/api/v1/clients/` | List registered corporate clients and tax identifiers |
+| `GET` | `/api/v1/analytics/summary` | Financial KPI aggregates (total billed, settled, outstanding) |
+| `GET` | `/api/v1/audit/` | Retrieve chronological compliance audit trail |
+
+### Example Request
+
+Fetch an itemized PDF invoice directly:
+
+```bash
+curl -I http://localhost:8000/api/v1/invoices/1/pdf
+```
+
+Response:
+```http
+HTTP/1.1 200 OK
+content-type: application/pdf
+content-disposition: inline; filename="INV-2026-0001.pdf"
+content-length: 3558
+```
 
 ---
 
-## 🧪 Automated Testing
+## Authentication & RBAC
 
-Run the test suite covering authentication, invoice math validation, and status lifecycles:
+The API uses OAuth2 Bearer tokens with JWT signatures. For local exploration and dashboard testing, unauthenticated requests automatically resolve to the pre-seeded administrator profile (`hamza@payflow.pk`).
+
+| Role | Permitted Actions |
+| :--- | :--- |
+| `ADMIN` | Full administrative privileges, audit log inspection, user management |
+| `FINANCE_MANAGER` | Create and issue invoices, update payment statuses, manage client profiles |
+| `AUDITOR` | Read-only inspection of invoices, analytics summaries, and audit trail |
+| `CLIENT` | Counterparty self-service inspection and payment confirmation |
+
+---
+
+## Testing
+
+Run the automated test suite with pytest:
 
 ```bash
 cd backend
@@ -133,9 +218,9 @@ pytest tests/ -v
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Hamza Ihsan**  
-Full-Stack & AI Systems Engineer  
-- **LinkedIn:** [hamza-ihsan-engineer](https://linkedin.com/in/hamza-ihsan-engineer)  
-- **Portfolio:** [Portfolio](file:///home/kali/portfolio/index.html)
+Full-Stack & Systems Engineer — Lahore, Pakistan  
+- GitHub: [@hamzaihsan9](https://github.com/hamzaihsan9)  
+- LinkedIn: [hamza-ihsan-engineer](https://linkedin.com/in/hamza-ihsan-engineer)

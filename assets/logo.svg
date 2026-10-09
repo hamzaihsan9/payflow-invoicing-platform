@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 110" width="520" height="110">
+  <defs>
+    <linearGradient id="p-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+    <linearGradient id="flow-cyan-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Dark Slate Card Background -->
+  <rect x="0" y="0" width="520" height="110" rx="14" fill="#0d111c" stroke="#222a3d" stroke-width="1.5" />
+
+  <!-- Logo Mark Icon -->
+  <g transform="translate(24, 22)">
+    <!-- Squircle Icon Box -->
+    <rect x="0" y="0" width="66" height="66" rx="16" fill="url(#p-bg-grad)" stroke="#6366f1" stroke-width="1.2" />
+    
+    <!-- Stylized Modern 'P' Letterform -->
+    <rect x="18" y="16" width="7" height="34" rx="3.5" fill="#ffffff" />
+    <path d="M25 16H36C40.9706 16 45 20.0294 45 25C45 29.9706 40.9706 34 36 34H25V16Z" fill="#ffffff" />
+    <path d="M25 22.5H35C36.3807 22.5 37.5 23.6193 37.5 25C37.5 26.3807 36.3807 27.5 35 27.5H25V22.5Z" fill="#312e81" />
+    
+    <!-- Flow Pulse Stream Under P -->
+    <path d="M29 39H40C42.7614 39 45 41.2386 45 44C45 46.7614 42.7614 49 40 49H34" stroke="url(#flow-cyan-grad)" stroke-width="3.5" stroke-linecap="round" />
+    <circle cx="31" cy="49" r="2.2" fill="#38bdf8" />
+  </g>
+
+  <!-- Typography & Wordmark with separate elements -->
+  <text x="108" y="56" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="34" font-weight="800" fill="#ffffff" letter-spacing="-0.5">Pay</text>
+  <text x="168" y="56" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="34" font-weight="800" fill="#38bdf8" letter-spacing="-0.5">Flow</text>
+  <circle cx="248" cy="53" r="3.5" fill="#6366f1" />
+  
+  <text x="110" y="76" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif" font-size="11.5" font-weight="600" fill="#94a3b8" letter-spacing="0.8">ENTERPRISE INVOICING &amp; FINANCIAL LEDGER</text>
+
+  <!-- Status / Stack Pill -->
+  <g transform="translate(415, 24)">
+    <rect x="0" y="0" width="82" height="24" rx="6" fill="#141a29" stroke="#25324d" stroke-width="1" />
+    <circle cx="12" cy="12" r="3.5" fill="#10b981" />
+    <text x="21" y="15.5" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="0.5">v1.0.0 PROD</text>
+  </g>
+</svg>
