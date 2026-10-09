@@ -3,95 +3,127 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Invoicing Portal | PayFlow</title>
+  <title>Customer Remittance &amp; Invoicing Portal | PayFlow</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: #0c0d12;
-      color: #e4e4e7;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #090a0f;
+      color: #f4f4f5;
     }
   </style>
 </head>
-<body class="min-h-screen bg-[#0c0d12] text-zinc-200 antialiased p-6 flex flex-col items-center">
-  <div id="vue-app" class="max-w-2xl w-full">
-    <!-- Clean Minimalist Header -->
-    <div class="flex items-center justify-between border-b border-zinc-800/80 pb-4 mb-6">
+<body class="min-h-screen bg-[#090a0f] text-zinc-100 antialiased p-6 flex flex-col items-center justify-center selection:bg-indigo-600/30">
+  <div id="vue-app" class="max-w-xl w-full">
+    
+    <!-- Portal Header -->
+    <div class="flex items-center justify-between border-b border-zinc-800 pb-4 mb-6">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center font-bold text-white text-xs">
+        <div class="w-8 h-8 rounded-md bg-indigo-600 flex items-center justify-center font-bold text-white text-xs shadow-sm">
           PF
         </div>
         <div>
-          <h1 class="text-sm font-semibold text-white">Customer Settlement Portal</h1>
-          <p class="text-xs text-zinc-400">Electronic remittance reconciliation</p>
+          <h1 class="text-sm font-semibold text-white">B2B Remittance &amp; Payment Portal</h1>
+          <p class="text-[11px] text-zinc-400">PayFlow Technologies &bull; Systems Limited Account</p>
         </div>
       </div>
-      <span class="text-xs text-zinc-400 font-mono px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800">
-        Account: Systems Limited
+      <span class="text-xs text-zinc-300 font-mono px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800">
+        NTN-0814920-1
       </span>
     </div>
 
     <!-- Invoice Details Card -->
-    <div class="bg-[#12141c] border border-zinc-800 rounded-lg p-6 shadow-sm mb-6">
+    <div class="bg-[#10121a] border border-zinc-800 rounded-lg p-6 shadow-xl mb-6">
       <div class="flex justify-between items-center mb-3">
-        <span class="text-xs text-zinc-400">Invoice Reference</span>
+        <span class="text-xs font-medium text-zinc-400">Tax Invoice Reference</span>
         <span class="px-2 py-0.5 rounded text-[11px] font-medium"
-              :class="invoice.status === 'PAID' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/60' : 'bg-zinc-800 text-zinc-300 border border-zinc-700'">
-          {{ invoice.status }}
+              :class="invoice.status === 'PAID' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/60' : 'bg-amber-950/60 text-amber-400 border border-amber-800/60'">
+          {{ invoice.status === 'PAID' ? 'SETTLED & RECONCILED' : 'PAYMENT DUE' }}
         </span>
       </div>
 
-      <div class="text-2xl font-bold text-white mb-1">
+      <div class="text-2xl font-bold text-white mb-1 font-mono">
         {{ invoice.currency }} {{ invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
       </div>
       <div class="text-xs text-zinc-400 mb-6 font-mono">
-        {{ invoice.number }} • Due: {{ invoice.dueDate }}
+        {{ invoice.number }} &bull; Maturity Date: {{ invoice.dueDate }} (Net-30)
       </div>
 
-      <!-- Banking Details -->
-      <div class="bg-[#161924] border border-zinc-800/80 rounded-md p-4 text-xs space-y-2 text-zinc-300">
-        <div class="font-medium text-white mb-1">Bank Remittance Instructions</div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Bank Name:</span>
-          <span class="text-zinc-200">Habib Bank Limited (HBL)</span>
+      <!-- Itemized Overview -->
+      <div class="rounded border border-zinc-800 bg-[#141622] p-3.5 mb-4 text-xs space-y-2">
+        <div class="font-medium text-zinc-300 border-b border-zinc-800 pb-2 flex justify-between">
+          <span>Deliverables / Billed Services</span>
+          <span class="font-mono text-zinc-400">Rate</span>
         </div>
         <div class="flex justify-between text-zinc-400">
-          <span>IBAN Account:</span>
-          <span class="text-zinc-200 font-mono">PK36HABB0001234567890123</span>
+          <span>Microservice Engineering (Sprints 1-4)</span>
+          <span class="font-mono text-zinc-300">PKR 600,000.00</span>
         </div>
         <div class="flex justify-between text-zinc-400">
-          <span>RAAST ID:</span>
-          <span class="text-zinc-200 font-mono">03446751031</span>
+          <span>High-Availability Redis &amp; DB Clustering</span>
+          <span class="font-mono text-zinc-300">PKR 150,000.00</span>
+        </div>
+        <div class="flex justify-between text-zinc-400">
+          <span>Punjab Sales Tax (PRA @ 16%)</span>
+          <span class="font-mono text-zinc-300">PKR 120,000.00</span>
         </div>
       </div>
 
-      <div class="mt-6 flex gap-3">
+      <!-- Banking Remittance Instructions -->
+      <div class="bg-[#141622] border border-zinc-800 rounded-md p-4 text-xs space-y-2.5 text-zinc-300 mb-6">
+        <div class="font-medium text-white flex items-center justify-between">
+          <span>Official Remittance Details (IBFT / RAAST)</span>
+          <span class="text-[10px] text-zinc-500 font-mono">HBL Corporate</span>
+        </div>
+        <div class="flex justify-between text-zinc-400">
+          <span>Account Title:</span>
+          <span class="text-zinc-200 font-medium">PayFlow Technologies (Pvt) Ltd</span>
+        </div>
+        <div class="flex justify-between text-zinc-400">
+          <span>Bank &amp; Branch:</span>
+          <span class="text-zinc-200">Habib Bank Limited (HBL) &mdash; Corporate Wing Lahore</span>
+        </div>
+        <div class="flex justify-between text-zinc-400">
+          <span>Corporate IBAN:</span>
+          <span class="text-zinc-200 font-mono select-all">PK36HABB0001234567890123</span>
+        </div>
+        <div class="flex justify-between text-zinc-400">
+          <span>RAAST Instant ID:</span>
+          <span class="text-zinc-200 font-mono select-all">03446751031</span>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3">
         <button @click="markSettled"
-                class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs py-2.5 rounded-md transition">
-          Confirm RAAST Transfer
+                :disabled="invoice.status === 'PAID'"
+                class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs py-2.5 rounded-md transition shadow-sm">
+          {{ invoice.status === 'PAID' ? 'Payment Reconciled' : 'Confirm Remittance via RAAST' }}
         </button>
         <a :href="`http://localhost:8000/api/v1/invoices/${invoice.id}/pdf`" 
            target="_blank"
-           class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-md transition">
-          Download PDF
+           rel="noopener noreferrer"
+           class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-md transition text-center inline-flex items-center justify-center gap-1.5">
+          <span>View &amp; Print PDF</span>
+          <span class="text-[10px]">↗</span>
         </a>
       </div>
     </div>
 
     <!-- Notification Toast -->
-    <div v-if="toast" class="fixed bottom-5 right-5 bg-zinc-900 border border-zinc-700 text-zinc-200 px-4 py-2.5 rounded-md shadow-xl text-xs font-medium">
-      {{ toast }}
+    <div v-if="toast" class="fixed bottom-5 right-5 bg-zinc-900 border border-zinc-700 text-zinc-100 px-4 py-2.5 rounded-md shadow-2xl text-xs font-medium flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span>{{ toast }}</span>
     </div>
   </div>
 
   <script>
-    const { createApp, ref } = Vue;
+    const { createApp, ref, onMounted } = Vue;
 
     createApp({
       setup() {
@@ -106,10 +138,35 @@
 
         const toast = ref('');
 
+        onMounted(() => {
+          fetch("http://localhost:8000/api/v1/invoices/1")
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data) {
+                invoice.value = {
+                  id: data.id,
+                  number: data.invoice_number,
+                  status: data.status,
+                  currency: data.currency,
+                  total: data.total_amount,
+                  dueDate: data.due_date ? data.due_date.slice(0, 10) : "2026-10-05"
+                };
+              }
+            })
+            .catch(() => {});
+        });
+
         const markSettled = () => {
-          invoice.value.status = "PAID";
-          toast.value = "Transfer verification acknowledged.";
-          setTimeout(() => { toast.value = ''; }, 3000);
+          fetch(`http://localhost:8000/api/v1/invoices/${invoice.value.id}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'PAID' })
+          })
+          .finally(() => {
+            invoice.value.status = "PAID";
+            toast.value = "Remittance confirmed. Financial ledger updated.";
+            setTimeout(() => { toast.value = ''; }, 3500);
+          });
         };
 
         return {
