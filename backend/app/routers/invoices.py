@@ -180,8 +180,7 @@ async def record_payment(
 @router.get("/{invoice_id}/pdf")
 def download_invoice_pdf(
     invoice_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
 ):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
