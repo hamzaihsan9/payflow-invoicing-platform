@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     # Microservice Webhook Worker URL (Node.js service)
     NODE_WORKER_URL: str = os.getenv("NODE_WORKER_URL", "http://localhost:5001")
     
+    # Gemini AI Automation Settings
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -62,6 +62,12 @@ flowchart LR
 - When an invoice is created or marked as paid, FastAPI asynchronously notifies the Node.js event engine over HTTP.
 - Ensures decouple operations between the primary database transaction and external notification hooks.
 
+### PayBot — Autonomous AI Financial Controller (Gemini API)
+- **Conversational Automation**: Natural language invoicing, aging audits, and status transitions via Google Gemini 2.5 Flash / 1.5 Flash.
+- **Native Tool Calling**: Gemini dynamically invokes database-backed functions (`create_invoice`, `update_invoice_status`, `record_payment`, `auto_reconcile_overdue`, `get_financial_summary`).
+- **Autonomous Receivables Sweeps**: Identifies past-maturity accounts, updates statuses to `OVERDUE`, recomputes portfolio risk, and logs compliance audits.
+- **Resilient Dual-Mode Execution**: Operates via Google Gemini API with seamless fallback to a built-in local autonomous rule engine.
+
 ---
 
 ## Project Structure
@@ -175,6 +181,9 @@ The interactive Swagger UI is available at `http://localhost:8000/docs`.
 | `GET` | `/api/v1/clients/` | List registered corporate clients and tax identifiers |
 | `GET` | `/api/v1/analytics/summary` | Financial KPI aggregates (total billed, settled, outstanding) |
 | `GET` | `/api/v1/audit/` | Retrieve chronological compliance audit trail |
+| `POST` | `/api/v1/paybot/chat` | Conversational financial controller powered by Gemini AI |
+| `GET` | `/api/v1/paybot/status` | PayBot operational health and registered tool schemas |
+| `POST` | `/api/v1/paybot/reconcile` | 1-Click autonomous receivables sweep and risk analysis |
 
 ### Example Request
 

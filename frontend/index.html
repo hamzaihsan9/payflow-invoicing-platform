@@ -12,6 +12,8 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Marked.js for AI Markdown Formatting -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -669,6 +671,26 @@
       );
     }
 
+    function renderMarkdown(content) {
+      if (!content) return { __html: '' };
+      try {
+        if (window.marked && typeof window.marked.parse === 'function') {
+          return { __html: window.marked.parse(content) };
+        }
+      } catch (e) {}
+      let html = content
+        .replace(/^### (.*$)/gim, '<h3 class="text-xs font-bold text-white uppercase font-mono mt-2 mb-1 text-sky-400">$1</h3>')
+        .replace(/^## (.*$)/gim, '<h2 class="text-sm font-bold text-white uppercase font-mono mt-2 mb-1 text-sky-300">$1</h2>')
+        .replace(/^# (.*$)/gim, '<h1 class="text-base font-bold text-white uppercase font-mono mt-3 mb-1">$1</h1>')
+        .replace(/\*\*(.*?)\*\*/gim, '<strong class="text-white font-semibold">$1</strong>')
+        .replace(/\*(.*?)\*/gim, '<em class="text-slate-300">$1</em>')
+        .replace(/`([^`]+)`/gim, '<code class="bg-[#111624] text-sky-300 px-1 py-0.5 rounded-none font-mono text-[11px] border border-slate-700">$1</code>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 underline font-semibold font-mono">$1 ↗</a>')
+        .replace(/^\- (.*$)/gim, '<li class="ml-4 list-disc text-slate-300 text-xs my-0.5">$1</li>')
+        .replace(/\n/gim, '<br />');
+      return { __html: html };
+    }
+
     function App() {
       // User Authentication Session State
       const [currentUser, setCurrentUser] = useState(() => {
@@ -698,6 +720,34 @@
       const [isBackendConnected, setIsBackendConnected] = useState(false);
       const [copiedKey, setCopiedKey] = useState(null);
       const searchInputRef = useRef(null);
+
+      // PayBot AI Autonomous Controller State
+      const [paybotMessages, setPaybotMessages] = useState([
+        {
+          role: 'model',
+          content: "### 🤖 PayBot Autonomous Operations Controller Online\n\nI am your AI financial controller, powered by **Google Gemini API** and directly integrated with PayFlow's invoicing database, ledger, and microservices.\n\nI can autonomously issue corporate tax invoices, reconcile receivables, calculate PRA 16% sales taxes, record payments, and stream ReportLab tax PDFs.\n\nSelect a quick action below or type any instruction:",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          suggested_prompts: [
+            "⚡ Auto-reconcile overdue receivables",
+            "📊 Executive financial health overview",
+            "📄 Create invoice for Systems Limited (350k PKR)",
+            "🏢 List registered enterprise clients"
+          ]
+        }
+      ]);
+      const [paybotInput, setPaybotInput] = useState('');
+      const [paybotLoading, setPaybotLoading] = useState(false);
+      const [isPaybotDrawerOpen, setIsPaybotDrawerOpen] = useState(false);
+      const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('payflow_gemini_key') || '');
+      const [showGeminiConfigModal, setShowGeminiConfigModal] = useState(false);
+      const [geminiInputKey, setGeminiInputKey] = useState(geminiApiKey);
+      const paybotChatEndRef = useRef(null);
+
+      useEffect(() => {
+        if (paybotChatEndRef.current) {
+          paybotChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, [paybotMessages, currentTab, isPaybotDrawerOpen]);
 
       // Financial Metrics
       const [stats, setStats] = useState({
@@ -885,6 +935,100 @@
         setCopiedKey(key);
         showToast(`Copied ${text}`);
         setTimeout(() => setCopiedKey(null), 2000);
+      };
+
+      // PayBot Message Sender & Autonomous Dispatcher
+      const sendPaybotMessage = async (msgText) => {
+        const text = (msgText || paybotInput).trim();
+        if (!text || paybotLoading) return;
+
+        const userMsg = {
+          role: 'user',
+          content: text,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        setPaybotMessages(prev => [...prev, userMsg]);
+        setPaybotInput('');
+        setPaybotLoading(true);
+
+        try {
+          const historyPayload = paybotMessages.slice(-6).map(m => ({
+            role: m.role,
+            content: m.content
+          }));
+
+          const res = await fetch(`${API_BASE}/paybot/chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+            },
+            body: JSON.stringify({
+              message: text,
+              history: historyPayload,
+              api_key: geminiApiKey || undefined
+            })
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          const botMsg = {
+            role: 'model',
+            content: data.response,
+            action_taken: data.action_taken,
+            source: data.source,
+            model: data.model,
+            suggested_prompts: data.suggested_prompts || [],
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+
+          setPaybotMessages(prev => [...prev, botMsg]);
+
+          // Automatically sync data across the platform if an action was executed
+          if (data.action_taken) {
+            refreshData();
+            if (data.action_taken.type === 'invoice_created') {
+              showToast(`PayBot issued ${data.action_taken.invoice_number}`);
+            } else if (data.action_taken.type === 'status_updated') {
+              showToast(`PayBot reconciled ${data.action_taken.invoice_number} -> ${data.action_taken.status}`);
+            } else if (data.action_taken.type === 'reconciliation_completed') {
+              showToast(`PayBot completed autonomous sweep: ${data.action_taken.flagged_count} accounts updated`);
+            }
+          }
+        } catch (err) {
+          setPaybotMessages(prev => [
+            ...prev,
+            {
+              role: 'model',
+              content: `❌ **Communication Error**: ${err.message}`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              suggested_prompts: ["Show financial summary", "Auto-reconcile overdue invoices"]
+            }
+          ]);
+        } finally {
+          setPaybotLoading(false);
+        }
+      };
+
+      const saveGeminiKey = (key) => {
+        const clean = (key || '').trim();
+        localStorage.setItem('payflow_gemini_key', clean);
+        setGeminiApiKey(clean);
+        setShowGeminiConfigModal(false);
+        if (clean) {
+          fetch(`${API_BASE}/paybot/config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: clean })
+          }).catch(() => {});
+          showToast("Gemini API Key activated for PayBot.");
+        } else {
+          showToast("Gemini Key removed. Operating in Local Mode.");
+        }
       };
 
       // Create Invoice handler
@@ -1081,18 +1225,19 @@
                   {[
                     { id: 'invoices', label: 'RECEIVABLES LEDGER', count: invoices.length },
                     { id: 'clients', label: 'CLIENT DIRECTORY', count: clients.length },
-                    { id: 'audit', label: 'COMPLIANCE & AUDIT', count: auditLogs.length }
+                    { id: 'audit', label: 'COMPLIANCE & AUDIT', count: auditLogs.length },
+                    { id: 'paybot', label: '🤖 PAYBOT AI', count: 'ONLINE', isAi: true }
                   ].map(tab => (
                     <button
                       key={tab.id}
                       onClick={() => setCurrentTab(tab.id)}
-                      className={`px-3 py-1.5 rounded-none text-xs font-semibold font-mono tracking-wider transition ${
+                      className={`px-3 py-1.5 rounded-none text-xs font-semibold font-mono tracking-wider transition flex items-center gap-1.5 ${
                         currentTab === tab.id
-                          ? 'bg-slate-800 text-white border-b-2 border-blue-500'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                          ? (tab.isAi ? 'bg-blue-950/70 text-sky-300 border-b-2 border-sky-400 font-bold' : 'bg-slate-800 text-white border-b-2 border-blue-500')
+                          : (tab.isAi ? 'text-sky-400 hover:text-sky-200 hover:bg-blue-950/40' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40')
                       }`}>
                       <span>{tab.label}</span>
-                      <span className="ml-1.5 text-[10px] text-slate-400">[{tab.count}]</span>
+                      <span className={`text-[10px] ${tab.isAi ? 'text-emerald-400 font-bold' : 'text-slate-400'}`}>[{tab.count}]</span>
                     </button>
                   ))}
                 </nav>
@@ -1685,6 +1830,344 @@
               </div>
             )}
 
+            {/* TAB 4: PayBot Autonomous AI Operations Deck */}
+            {currentTab === 'paybot' && (
+              <div className="space-y-4">
+                
+                {/* Header Banner */}
+                <div className="bg-[#0e121a] border border-slate-800 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-none bg-blue-600/20 border border-blue-500/50 flex items-center justify-center text-xl shrink-0">
+                      🤖
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h2 className="font-bold text-white text-base tracking-tight font-sans">
+                          PayBot Autonomous Operations Controller
+                        </h2>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-950 text-emerald-400 border border-emerald-800 uppercase font-semibold">
+                          AGENT ONLINE
+                        </span>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-blue-950 text-blue-300 border border-blue-800 uppercase">
+                          {geminiApiKey ? 'GEMINI 2.5 FLASH' : 'LOCAL AUTONOMOUS'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-0.5 font-sans">
+                        Continuous Corporate Invoicing, PRA 16% Tax Compliance, and Receivables Settlement Engine
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <button
+                      onClick={() => setShowGeminiConfigModal(true)}
+                      className={`px-3 py-1.5 rounded-none border transition flex items-center gap-1.5 ${
+                        geminiApiKey 
+                          ? 'border-blue-700 bg-blue-950/40 text-blue-300 hover:border-blue-500' 
+                          : 'border-slate-700 bg-slate-900 text-slate-300 hover:border-blue-500'
+                      }`}>
+                      <span>🔑</span>
+                      <span>{geminiApiKey ? 'GEMINI KEY: CONFIGURED' : 'SET GEMINI KEY'}</span>
+                    </button>
+                    <button
+                      onClick={() => setPaybotMessages([])}
+                      className="px-2.5 py-1.5 rounded-none border border-slate-800 text-slate-400 hover:text-rose-400 hover:border-rose-800 transition"
+                      title="Clear chat history">
+                      RESET
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2-Column Command Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                  
+                  {/* Left Column: Autonomous Workflows & Tool Registry (4 cols) */}
+                  <div className="lg:col-span-4 space-y-4">
+                    
+                    {/* One-Click Autonomous Workflows */}
+                    <div className="bg-[#0e121a] border border-slate-800 p-4 space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-mono">
+                        <span className="font-bold text-slate-300 uppercase">ONE-CLICK AUTONOMOUS RUNS</span>
+                        <span className="text-[10px] text-emerald-400">INSTANT</span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <button
+                          onClick={() => sendPaybotMessage("Auto-reconcile overdue invoices and analyze aging")}
+                          disabled={paybotLoading}
+                          className="w-full text-left p-2.5 bg-[#121624] hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600 transition flex items-center justify-between group">
+                          <div>
+                            <div className="font-mono text-xs font-semibold text-white group-hover:text-blue-300 flex items-center gap-1.5">
+                              <span>⚡</span>
+                              <span>SWEEP &amp; RECONCILE OVERDUE</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-sans mt-0.5">
+                              Flags past-maturity invoices to OVERDUE &amp; updates ledger
+                            </div>
+                          </div>
+                          <span className="text-slate-500 group-hover:text-white font-mono text-xs">&rarr;</span>
+                        </button>
+
+                        <button
+                          onClick={() => sendPaybotMessage("Give me the executive financial summary")}
+                          disabled={paybotLoading}
+                          className="w-full text-left p-2.5 bg-[#121624] hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600 transition flex items-center justify-between group">
+                          <div>
+                            <div className="font-mono text-xs font-semibold text-white group-hover:text-blue-300 flex items-center gap-1.5">
+                              <span>📊</span>
+                              <span>FINANCIAL HEALTH &amp; TAX KPI</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-sans mt-0.5">
+                              Total billed, collected revenue, and PRA 16% metrics
+                            </div>
+                          </div>
+                          <span className="text-slate-500 group-hover:text-white font-mono text-xs">&rarr;</span>
+                        </button>
+
+                        <button
+                          onClick={() => sendPaybotMessage("Create invoice for Jazz Telecom for 480000 PKR for 5G Core Architecture Support")}
+                          disabled={paybotLoading}
+                          className="w-full text-left p-2.5 bg-[#121624] hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600 transition flex items-center justify-between group">
+                          <div>
+                            <div className="font-mono text-xs font-semibold text-white group-hover:text-blue-300 flex items-center gap-1.5">
+                              <span>📄</span>
+                              <span>ISSUE DEMO TAX INVOICE</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-sans mt-0.5">
+                              Jazz Telecom &bull; PKR 480,000 &bull; Net 15 Maturity
+                            </div>
+                          </div>
+                          <span className="text-slate-500 group-hover:text-white font-mono text-xs">&rarr;</span>
+                        </button>
+
+                        <button
+                          onClick={() => sendPaybotMessage("List all registered corporate clients and their tax registrations")}
+                          disabled={paybotLoading}
+                          className="w-full text-left p-2.5 bg-[#121624] hover:bg-blue-950/40 border border-slate-800 hover:border-blue-600 transition flex items-center justify-between group">
+                          <div>
+                            <div className="font-mono text-xs font-semibold text-white group-hover:text-blue-300 flex items-center gap-1.5">
+                              <span>🏢</span>
+                              <span>AUDIT CLIENT COUNTERPARTIES</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-sans mt-0.5">
+                              View registered NTN, contact persons, and exposure
+                            </div>
+                          </div>
+                          <span className="text-slate-500 group-hover:text-white font-mono text-xs">&rarr;</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Agent Architecture Specs */}
+                    <div className="bg-[#0e121a] border border-slate-800 p-4 space-y-3 font-mono text-xs">
+                      <div className="pb-2 border-b border-slate-800 font-bold text-slate-300 uppercase">
+                        AI ENGINE ARCHITECTURE
+                      </div>
+                      
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between py-1 border-b border-slate-800/60">
+                          <span className="text-slate-500">PROVIDER</span>
+                          <span className="text-white font-semibold">Google Gemini API</span>
+                        </div>
+                        <div className="flex justify-between py-1 border-b border-slate-800/60">
+                          <span className="text-slate-500">PRIMARY MODEL</span>
+                          <span className="text-sky-400 font-semibold">gemini-2.5-flash</span>
+                        </div>
+                        <div className="flex justify-between py-1 border-b border-slate-800/60">
+                          <span className="text-slate-500">FALLBACK MODE</span>
+                          <span className="text-emerald-400 font-semibold">Local Autonomous</span>
+                        </div>
+                        <div className="flex justify-between py-1 border-b border-slate-800/60">
+                          <span className="text-slate-500">SALES TAX RATE</span>
+                          <span className="text-white font-semibold">PRA 16.0% (Punjab)</span>
+                        </div>
+                        <div className="flex justify-between py-1">
+                          <span className="text-slate-500">EVENT ENGINE</span>
+                          <span className="text-white font-semibold">Node.js Webhook Bus (:5001)</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800">
+                        <span className="text-[10px] text-slate-500 uppercase block mb-1.5">REGISTERED GEMINI TOOLS:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {['create_invoice', 'update_status', 'record_payment', 'auto_reconcile', 'get_summary', 'list_clients', 'stream_pdf'].map(tool => (
+                            <span key={tool} className="text-[10px] px-1.5 py-0.5 bg-slate-900 border border-slate-800 text-slate-400 font-mono">
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Conversational Console (8 cols) */}
+                  <div className="lg:col-span-8 flex flex-col h-[650px] bg-[#0c1018] border border-slate-700 shadow-2xl relative">
+                    
+                    {/* Console Header */}
+                    <div className="bg-[#0e121c] border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 bg-emerald-400 animate-pulse"></span>
+                        <span className="font-mono text-xs font-bold text-white uppercase tracking-wider">
+                          PAYBOT CONVERSATIONAL CONSOLE
+                        </span>
+                      </div>
+                      <span className="font-mono text-[11px] text-slate-400">
+                        {paybotMessages.length} ENTRIES LOGGED
+                      </span>
+                    </div>
+
+                    {/* Chat Messages Stream */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                      {paybotMessages.map((msg, idx) => (
+                        <div 
+                          key={idx}
+                          className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          
+                          {msg.role !== 'user' && (
+                            <div className="w-7 h-7 rounded-none bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-sm shrink-0 mt-0.5">
+                              🤖
+                            </div>
+                          )}
+
+                          <div className={`max-w-xl space-y-2.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                            
+                            <div className={`p-3.5 rounded-none text-xs leading-relaxed ${
+                              msg.role === 'user'
+                                ? 'bg-blue-600 text-white font-sans border border-blue-400/40 shadow'
+                                : 'bg-[#121622] text-slate-200 border border-slate-800 shadow-md font-sans'
+                            }`}>
+                              <div 
+                                className="prose prose-invert max-w-none text-xs leading-relaxed"
+                                dangerouslySetInnerHTML={renderMarkdown(msg.content)} 
+                              />
+                            </div>
+
+                            {/* Action Result Card Preview */}
+                            {msg.action_taken && (
+                              <div className="p-3 bg-slate-900 border border-blue-900/60 text-xs font-mono space-y-2">
+                                <div className="flex items-center justify-between text-blue-400 font-bold border-b border-slate-800 pb-1">
+                                  <span>⚡ ACTION EXECUTED: {msg.action_taken.type.toUpperCase()}</span>
+                                  <span className="text-[10px] text-emerald-400">SUCCESS</span>
+                                </div>
+
+                                {msg.action_taken.type === 'invoice_created' && (
+                                  <div className="space-y-1.5 text-[11px]">
+                                    <div className="flex justify-between">
+                                      <span className="text-slate-400">INVOICE:</span>
+                                      <span className="text-white font-bold">{msg.action_taken.invoice_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-slate-400">CLIENT:</span>
+                                      <span className="text-slate-200">{msg.action_taken.client_company}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-slate-400">NET TOTAL:</span>
+                                      <span className="text-emerald-400 font-bold">PKR {Number(msg.action_taken.total_amount).toLocaleString()}</span>
+                                    </div>
+                                    <div className="pt-2 flex items-center gap-2">
+                                      <a
+                                        href={msg.action_taken.pdf_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-none border border-blue-400/40 transition">
+                                        📄 VIEW PDF ↗
+                                      </a>
+                                      <button
+                                        onClick={() => sendPaybotMessage(`Mark ${msg.action_taken.invoice_number} as paid`)}
+                                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-none border border-slate-700 transition">
+                                        SETTLE AS PAID
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {msg.action_taken.type === 'status_updated' && (
+                                  <div className="text-[11px] text-slate-300">
+                                    Invoice <strong className="text-white">{msg.action_taken.invoice_number}</strong> status transitioned to <span className="text-emerald-400 font-bold">{msg.action_taken.status}</span>.
+                                  </div>
+                                )}
+
+                                {msg.action_taken.type === 'reconciliation_completed' && (
+                                  <div className="text-[11px] text-slate-300">
+                                    Flagged <strong className="text-white">{msg.action_taken.flagged_count}</strong> accounts. Overdue total: <span className="text-rose-400 font-bold">PKR {Number(msg.action_taken.total_overdue_pkr).toLocaleString()}</span>.
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Suggested Prompts Pills */}
+                            {msg.suggested_prompts && msg.suggested_prompts.length > 0 && idx === paybotMessages.length - 1 && (
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {msg.suggested_prompts.map((p, pIdx) => (
+                                  <button
+                                    key={pIdx}
+                                    onClick={() => sendPaybotMessage(p)}
+                                    disabled={paybotLoading}
+                                    className="text-[10px] font-mono px-2 py-1 bg-slate-900 hover:bg-blue-950/60 border border-slate-800 hover:border-blue-500 text-slate-300 hover:text-white rounded-none transition">
+                                    {p}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
+                            <span className="text-[10px] font-mono text-slate-500 block">
+                              {msg.timestamp}
+                            </span>
+
+                          </div>
+
+                          {msg.role === 'user' && (
+                            <div className="w-7 h-7 rounded-none bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-mono font-bold text-slate-200 shrink-0 mt-0.5">
+                              YOU
+                            </div>
+                          )}
+
+                        </div>
+                      ))}
+
+                      {paybotLoading && (
+                        <div className="flex gap-3 items-center text-xs font-mono text-slate-400">
+                          <div className="w-7 h-7 rounded-none bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-sm shrink-0">
+                            🤖
+                          </div>
+                          <div className="p-3 bg-[#121622] border border-slate-800 flex items-center gap-2">
+                            <span className="w-2 h-2 bg-blue-400 animate-ping"></span>
+                            <span>PayBot is processing financial operation...</span>
+                          </div>
+                        </div>
+                      )}
+
+                      <div ref={paybotChatEndRef} />
+                    </div>
+
+                    {/* Console Input Bar */}
+                    <form 
+                      onSubmit={(e) => { e.preventDefault(); sendPaybotMessage(); }}
+                      className="border-t border-slate-800 p-3 bg-[#0d1018] flex items-center gap-2 shrink-0">
+                      <input
+                        type="text"
+                        value={paybotInput}
+                        onChange={(e) => setPaybotInput(e.target.value)}
+                        placeholder="Instruct PayBot (e.g. 'Create invoice for Jazz Telecom for 500k', 'Reconcile overdue accounts')..."
+                        disabled={paybotLoading}
+                        className="flex-1 bg-[#111520] border border-slate-700 rounded-none px-3 py-2 text-xs text-white font-sans focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                      />
+                      <button
+                        type="submit"
+                        disabled={paybotLoading || !paybotInput.trim()}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-mono font-bold text-xs px-4 py-2 rounded-none border border-blue-400/40 transition">
+                        {paybotLoading ? 'RUNNING...' : 'EXECUTE ↵'}
+                      </button>
+                    </form>
+
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
           </main>
 
           {/* ========================================================
@@ -2045,11 +2528,219 @@
             </div>
           )}
 
-          {/* Toast Notification (Squared) */}
-          {notification && (
-            <div className="fixed bottom-5 right-5 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-none shadow-2xl text-xs font-mono font-semibold z-50 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-none bg-emerald-400"></span>
-              <span>{notification.text}</span>
+          {/* Floating PayBot Launcher & Drawer (Active across all tabs) */}
+          <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end font-sans">
+            
+            {/* Pop-up Drawer */}
+            {isPaybotDrawerOpen && (
+              <div className="mb-3 w-96 h-[520px] bg-[#0c1018] border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+                <div className="bg-[#0e121c] border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">🤖</span>
+                    <div>
+                      <span className="font-mono text-xs font-bold text-white block">PayBot AI Controller</span>
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-emerald-400 animate-pulse"></span> ONLINE
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <button
+                      onClick={() => { setIsPaybotDrawerOpen(false); setCurrentTab('paybot'); }}
+                      className="text-slate-400 hover:text-white px-1.5 py-0.5 border border-slate-700 text-[10px]"
+                      title="Expand to Full View">
+                      EXPAND ↗
+                    </button>
+                    <button
+                      onClick={() => setIsPaybotDrawerOpen(false)}
+                      className="text-slate-400 hover:text-white p-1">
+                      ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* Drawer Messages Stream */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                  {paybotMessages.map((msg, idx) => (
+                    <div 
+                      key={idx}
+                      className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      {msg.role !== 'user' && (
+                        <div className="w-6 h-6 rounded-none bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-xs shrink-0 mt-0.5">
+                          🤖
+                        </div>
+                      )}
+                      <div className={`max-w-[82%] space-y-1.5 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                        <div className={`p-2.5 rounded-none text-xs leading-relaxed ${
+                          msg.role === 'user'
+                            ? 'bg-blue-600 text-white font-sans border border-blue-400/40'
+                            : 'bg-[#121622] text-slate-200 border border-slate-800 font-sans'
+                        }`}>
+                          <div 
+                            className="prose prose-invert max-w-none text-xs leading-relaxed"
+                            dangerouslySetInnerHTML={renderMarkdown(msg.content)} 
+                          />
+                        </div>
+
+                        {/* Action Preview Pill */}
+                        {msg.action_taken && (
+                          <div className="p-2 bg-slate-900 border border-blue-900/60 text-[11px] font-mono space-y-1">
+                            <div className="text-blue-400 font-bold">
+                              ⚡ {msg.action_taken.type.toUpperCase()}
+                            </div>
+                            {msg.action_taken.invoice_number && (
+                              <div className="text-white font-semibold">
+                                {msg.action_taken.invoice_number} ({msg.action_taken.client_company || ''})
+                              </div>
+                            )}
+                            {msg.action_taken.pdf_url && (
+                              <a
+                                href={msg.action_taken.pdf_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-block mt-1 text-sky-400 hover:underline">
+                                📄 Open PDF ↗
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {paybotLoading && (
+                    <div className="flex gap-2 items-center text-xs font-mono text-slate-400">
+                      <div className="w-6 h-6 rounded-none bg-blue-600/30 border border-blue-500/50 flex items-center justify-center text-xs shrink-0">
+                        🤖
+                      </div>
+                      <div className="p-2 bg-[#121622] border border-slate-800 flex items-center gap-1.5 text-[11px]">
+                        <span className="w-1.5 h-1.5 bg-blue-400 animate-ping"></span>
+                        <span>Executing...</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={paybotChatEndRef} />
+                </div>
+
+                {/* Drawer Input Bar */}
+                <form 
+                  onSubmit={(e) => { e.preventDefault(); sendPaybotMessage(); }}
+                  className="border-t border-slate-800 p-2.5 bg-[#0d1018] flex items-center gap-1.5 shrink-0">
+                  <input
+                    type="text"
+                    value={paybotInput}
+                    onChange={(e) => setPaybotInput(e.target.value)}
+                    placeholder="Command PayBot..."
+                    disabled={paybotLoading}
+                    className="flex-1 bg-[#111520] border border-slate-700 rounded-none px-2.5 py-1.5 text-xs text-white font-sans focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={paybotLoading || !paybotInput.trim()}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-none border border-blue-400/40">
+                    ↵
+                  </button>
+                </form>
+
+              </div>
+            )}
+
+            {/* Floating Action Button */}
+            <button
+              onClick={() => setIsPaybotDrawerOpen(prev => !prev)}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs font-bold px-4 py-2.5 rounded-none border border-blue-400/40 shadow-2xl flex items-center gap-2 transition group">
+              <span className="text-base group-hover:scale-110 transition-transform">🤖</span>
+              <span>PAYBOT AI</span>
+              <span className="w-2 h-2 bg-emerald-400"></span>
+            </button>
+
+          </div>
+
+          {/* ========================================================
+              GEMINI API KEY CONFIGURATION MODAL
+             ======================================================== */}
+          {showGeminiConfigModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="max-w-md w-full bg-[#0d121c] border border-slate-700 rounded-none shadow-2xl p-6 relative">
+                
+                <div className="flex items-start justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl">🤖</span>
+                    <div>
+                      <h3 className="text-sm font-bold text-white uppercase font-sans">
+                        Configure Google Gemini AI
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-mono">
+                        Native Tool Calling &bull; gemini-2.5-flash
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowGeminiConfigModal(false)}
+                    className="text-slate-400 hover:text-white font-mono text-base p-1">
+                    ✕
+                  </button>
+                </div>
+
+                <div className="py-4 space-y-4 text-xs font-sans">
+                  <p className="text-slate-300 leading-relaxed">
+                    Provide your <strong>Google Gemini API Key</strong> to activate PayBot's native multi-turn reasoning and automated function calling against your corporate ledger.
+                  </p>
+
+                  <div className="p-3 bg-blue-950/30 border border-blue-900/60 rounded-none text-blue-200 text-[11px] leading-relaxed">
+                    Don't have a key? Generate a free API key instantly at{' '}
+                    <a 
+                      href="https://aistudio.google.com/app/apikey" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sky-400 underline font-semibold">
+                      Google AI Studio ↗
+                    </a>.
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 font-mono text-[11px] uppercase tracking-wider mb-1.5 font-semibold">
+                      GEMINI API KEY (AIzaSy...)
+                    </label>
+                    <input
+                      type="password"
+                      value={geminiInputKey}
+                      onChange={(e) => setGeminiInputKey(e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full bg-[#111520] border border-slate-700 rounded-none px-3 py-2 text-white font-mono text-xs focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-800 font-mono text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGeminiInputKey('');
+                        saveGeminiKey('');
+                      }}
+                      className="text-rose-400 hover:text-rose-300 underline">
+                      CLEAR KEY
+                    </button>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowGeminiConfigModal(false)}
+                        className="px-3 py-1.5 border border-slate-700 text-slate-400 hover:text-white">
+                        CANCEL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => saveGeminiKey(geminiInputKey)}
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold border border-blue-400/40">
+                        SAVE &amp; ACTIVATE
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
             </div>
           )}
 

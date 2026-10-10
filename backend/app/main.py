@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from app.config import settings
 from app.database import engine, Base
-from app.routers import auth, clients, invoices, analytics, audit
+from app.routers import auth, clients, invoices, analytics, audit, paybot
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +36,7 @@ app.include_router(clients.router, prefix=settings.API_V1_PREFIX)
 app.include_router(invoices.router, prefix=settings.API_V1_PREFIX)
 app.include_router(analytics.router, prefix=settings.API_V1_PREFIX)
 app.include_router(audit.router, prefix=settings.API_V1_PREFIX)
+app.include_router(paybot.router, prefix=settings.API_V1_PREFIX)
 
 @app.get("/health", tags=["System Health"])
 def health_check():
