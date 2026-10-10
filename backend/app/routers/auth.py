@@ -1,11 +1,13 @@
 from datetime import timedelta
+from typing import Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.models import User, UserRole
-from app.schemas.schemas import UserCreate, UserResponse, Token
+from app.schemas.schemas import UserCreate, UserResponse, UserLogin, Token
 from app.services.auth_service import (
     verify_password, get_password_hash, create_access_token, 
     get_current_user, record_audit_log
@@ -58,7 +60,58 @@ def login_for_access_token(
     )
     record_audit_log(
         db, user.id, "USER_LOGIN", "USER", str(user.id),
-        f"User logged in from API client: {user.email}"
+        f"User logged in: {user.email}"
+    )
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+@router.post("/login-json", response_model=Token)
+def login_json(
+    credentials: UserLogin,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.email == credentials.email).first()
+    if not user or not verify_password(credentials.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password combination."
+        )
+    
+    access_token = create_access_token(
+        data={"sub": user.email, "role": user.role.value, "user_id": user.id}
+    )
+    record_audit_log(
+        db, user.id, "USER_LOGIN", "USER", str(user.id),
+        f"User logged in via JSON auth: {user.email}"
+    )
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+class OAuthSSORequest(BaseModel):
+    provider: str  # "google" or "microsoft"
+    email: str
+    name: Optional[str] = None
+    token: Optional[str] = None
+
+@router.post("/oauth/sso", response_model=Token)
+def oauth_sso_login(
+    payload: OAuthSSORequest,
+    db: Session = Depends(get_db)
+):
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    
+    # If not registered, enterprise restriction applies
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account not found. Self-registration is disabled. Please contact the administrator at admin@payflow.pk to provision enterprise access."
+        )
+    
+    access_token = create_access_token(
+        data={"sub": user.email, "role": user.role.value, "user_id": user.id}
+    )
+    record_audit_log(
+        db, user.id, "SSO_LOGIN", "USER", str(user.id),
+        f"User authenticated via {payload.provider.upper()} SSO: {user.email}"
     )
     return {"access_token": access_token, "token_type": "bearer", "user": user}
 

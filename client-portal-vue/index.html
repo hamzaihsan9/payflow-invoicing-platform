@@ -1,194 +1,442 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Customer Remittance &amp; Invoicing Portal | PayFlow</title>
+  <title>PayFlow — Counterparty Remittance &amp; Settlement Portal</title>
+  
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Inter"', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'Fira Code', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
     body {
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background-color: #090a0f;
-      color: #f4f4f5;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #080a0f;
+      color: #f1f5f9;
+      letter-spacing: -0.011em;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
     }
+    .tnum { font-feature-settings: 'tnum' on, 'cv05' on, 'zero' on; }
+    
+    .bg-grid-tech {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #0b0e14; }
+    ::-webkit-scrollbar-thumb { background: #272d3d; border-radius: 0px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3b4256; }
   </style>
 </head>
-<body class="min-h-screen bg-[#090a0f] text-zinc-100 antialiased p-6 flex flex-col items-center justify-center selection:bg-indigo-600/30">
-  <div id="vue-app" class="max-w-xl w-full">
+<body class="min-h-screen bg-[#080a0f] text-slate-100 p-4 sm:p-8 flex flex-col items-center justify-center bg-grid-tech selection:bg-blue-600/30">
+  
+  <div id="vue-app" class="max-w-2xl w-full my-6">
     
-    <!-- Portal Header -->
-    <div class="flex items-center justify-between border-b border-zinc-800 pb-4 mb-6">
+    <!-- Portal Header Brand Bar (Sharp Squared) -->
+    <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-800">
       <div class="flex items-center gap-3">
-        <div class="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-md shadow-indigo-600/25">
-          <svg viewBox="0 0 40 40" width="32" height="32" fill="none">
+        <div class="w-8 h-8 rounded-none overflow-hidden flex items-center justify-center bg-[#0d1222] border border-indigo-500/50 shadow-sm shrink-0">
+          <svg viewBox="0 0 40 40" width="30" height="30" fill="none">
             <defs>
-              <linearGradient id="vue-nav-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id="vue-pf-bg" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stop-color="#4f46e5" />
-                <stop offset="100%" stop-color="#312e81" />
+                <stop offset="100%" stop-color="#2563eb" />
               </linearGradient>
-              <linearGradient id="vue-nav-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
+              <linearGradient id="vue-pf-cyan" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stop-color="#38bdf8" />
                 <stop offset="100%" stop-color="#818cf8" />
               </linearGradient>
             </defs>
-            <rect x="1" y="1" width="38" height="38" rx="9" fill="url(#vue-nav-bg)" stroke="#6366f1" stroke-width="1" />
-            <rect x="11" y="10" width="4.5" height="20" rx="2.25" fill="#ffffff" />
+            <rect x="2" y="2" width="36" height="36" fill="url(#vue-pf-bg)" stroke="#6366f1" stroke-width="1" />
+            <rect x="11" y="10" width="4.5" height="20" rx="1" fill="#ffffff" />
             <path d="M15.5 10H22.5C25.5376 10 28 12.4624 28 15.5C28 18.5376 25.5376 21 22.5 21H15.5V10Z" fill="#ffffff" />
-            <path d="M15.5 14H21.5C22.6046 14 23.5 14.8954 23.5 16C23.5 17.1046 22.6046 18 21.5 18H15.5V14Z" fill="#312e81" />
-            <path d="M18 24H24C25.6569 24 27 25.3431 27 27C27 28.6569 25.6569 30 24 30H20" stroke="url(#vue-nav-cyan)" stroke-width="2.2" stroke-linecap="round" />
+            <path d="M15.5 14H21.5C22.6046 14 23.5 14.8954 23.5 16C23.5 17.1046 22.6046 18 21.5 18H15.5V14Z" fill="#1e1b4b" />
+            <path d="M18 24H24C25.6569 24 27 25.3431 27 27C27 28.6569 25.6569 30 24 30H20" stroke="url(#vue-pf-cyan)" stroke-width="2.2" stroke-linecap="round" />
             <circle cx="18.5" cy="30" r="1.2" fill="#38bdf8" />
           </svg>
         </div>
         <div>
-          <h1 class="text-sm font-bold text-white">Pay<span class="text-sky-400">Flow</span> <span class="text-zinc-400 font-normal">&bull; Settlement Portal</span></h1>
-          <p class="text-[11px] text-zinc-400">PayFlow Technologies &bull; Systems Limited Account</p>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-white text-base tracking-tight font-sans">
+              Pay<span class="text-sky-400">Flow</span>
+            </span>
+            <span class="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded-none bg-slate-800 text-slate-300 border border-slate-700">
+              REMITTANCE DESK
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 font-sans">
+            Counterparty Settlement Portal &bull; <strong class="text-white">{{ currentInvoice.client.company }}</strong>
+          </p>
         </div>
       </div>
-      <span class="text-xs text-zinc-300 font-mono px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800">
-        NTN-0814920-1
-      </span>
+
+      <div class="flex items-center gap-3 font-mono text-xs">
+        <a href="/" 
+           class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded-none bg-slate-900 border border-slate-800 hover:border-slate-700 transition">
+          &larr; ADMIN LEDGER
+        </a>
+
+        <div class="text-right hidden sm:block">
+          <span class="text-[10px] text-blue-400 bg-blue-950/60 border border-blue-800 px-2 py-0.5 rounded-none block font-semibold">
+            {{ currentInvoice.client.tax_id || 'NTN VERIFIED' }}
+          </span>
+          <span class="text-[10px] text-slate-400 mt-0.5 block">PRA 16% COMPLIANT</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Invoice Details Card -->
-    <div class="bg-[#10121a] border border-zinc-800 rounded-lg p-6 shadow-xl mb-6">
-      <div class="flex justify-between items-center mb-3">
-        <span class="text-xs font-medium text-zinc-400">Tax Invoice Reference</span>
-        <span class="px-2 py-0.5 rounded text-[11px] font-medium"
-              :class="invoice.status === 'PAID' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/60' : 'bg-amber-950/60 text-amber-400 border border-amber-800/60'">
-          {{ invoice.status === 'PAID' ? 'SETTLED & RECONCILED' : 'PAYMENT DUE' }}
+    <!-- Active Invoice Switcher (Sharp Squared) -->
+    <div v-if="allInvoices.length > 1" class="mb-4 flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono">
+      <span class="text-slate-500 text-[10px] uppercase tracking-wider shrink-0 font-bold">SWITCH INVOICE:</span>
+      <button 
+        v-for="inv in allInvoices" 
+        :key="inv.id"
+        @click="selectInvoice(inv.id)"
+        class="px-2.5 py-1 rounded-none text-xs font-semibold whitespace-nowrap transition border flex items-center gap-1.5"
+        :class="currentInvoice.id === inv.id ? 'bg-blue-600 text-white border-blue-400 shadow-sm' : 'bg-[#0d1017] text-slate-400 border-slate-800 hover:text-white hover:border-slate-700'">
+        <span>{{ inv.invoice_number }}</span>
+        <span class="w-1.5 h-1.5 rounded-none"
+              :class="inv.status === 'PAID' ? 'bg-emerald-400' : inv.status === 'OVERDUE' ? 'bg-rose-400' : 'bg-blue-400'"></span>
+      </button>
+    </div>
+
+    <!-- Main Settlement Card (Sharp Squared) -->
+    <div class="rounded-none bg-[#0d1017] border border-slate-800 p-6 shadow-xl relative overflow-hidden">
+      
+      <!-- Reference & Status Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-800">
+        <div>
+          <span class="text-[10px] uppercase font-mono font-bold tracking-wider text-slate-500">COMMERCIAL TAX INVOICE SLIP</span>
+          <h2 class="font-mono font-bold text-white text-lg mt-0.5 flex items-center gap-2">
+            <span>{{ currentInvoice.invoice_number }}</span>
+            <button @click="copyText(currentInvoice.invoice_number, 'inv_no')" 
+                    class="text-slate-400 hover:text-white text-xs border border-slate-700 px-1 py-0.2" 
+                    title="Copy invoice number">
+              {{ copied === 'inv_no' ? 'COPIED' : 'COPY' }}
+            </button>
+          </h2>
+          <p class="text-xs text-slate-400 font-mono mt-0.5">
+            ISSUED: <span class="text-slate-200">{{ formatDate(currentInvoice.issue_date) }}</span> &bull; 
+            DUE: <span class="font-semibold" :class="currentInvoice.status === 'OVERDUE' ? 'text-rose-400' : 'text-slate-200'">{{ formatDate(currentInvoice.due_date) }}</span>
+          </p>
+        </div>
+
+        <span class="self-start sm:self-center px-2.5 py-1 rounded-none text-[10px] font-mono font-bold uppercase tracking-wider border"
+              :class="currentInvoice.status === 'PAID' 
+                ? 'bg-emerald-950/60 text-emerald-400 border-emerald-800' 
+                : currentInvoice.status === 'OVERDUE'
+                ? 'bg-rose-950/60 text-rose-400 border-rose-800'
+                : 'bg-blue-950/60 text-blue-400 border-blue-800'">
+          {{ currentInvoice.status === 'PAID' ? 'SETTLED & RECONCILED' : currentInvoice.status === 'OVERDUE' ? 'PAYMENT OVERDUE' : 'PENDING NET-30' }}
         </span>
       </div>
 
-      <div class="text-2xl font-bold text-white mb-1 font-mono">
-        {{ invoice.currency }} {{ invoice.total.toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
-      </div>
-      <div class="text-xs text-zinc-400 mb-6 font-mono">
-        {{ invoice.number }} &bull; Maturity Date: {{ invoice.dueDate }} (Net-30)
-      </div>
+      <!-- Counterparty Detail Box with ACTUAL LOGO -->
+      <div class="p-4 rounded-none bg-[#121622] border border-slate-800 mb-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <div class="flex items-start gap-3">
+          <!-- Real Company Logo in Vue Portal -->
+          <div class="shrink-0 mt-0.5">
+            <svg v-if="currentInvoice.client.company.toLowerCase().includes('systems')" class="w-8 h-8" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" fill="#0c1322" stroke="#1d4ed8" stroke-width="1" />
+              <path d="M10 24L18 10L26 10L18 24H10Z" fill="#0284c7" />
+              <path d="M18 26L26 12H21L13 26H18Z" fill="#38bdf8" />
+              <circle cx="13" cy="13" r="2.2" fill="#38bdf8" />
+            </svg>
+            <svg v-else-if="currentInvoice.client.company.toLowerCase().includes('jazz')" class="w-8 h-8" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" fill="#180c10" stroke="#dc2626" stroke-width="1" />
+              <path d="M12 25V21C12 17 15 16 19 16V12C11 12 8 17 8 21V25H12Z" fill="#facc15" />
+              <path d="M18 25C22.4 25 26 21.4 26 17C26 10 19 8.5 19 8.5C19 8.5 22 11.5 22 15C22 18 20 20 17 20V25H18Z" fill="#e11d48" />
+              <circle cx="19" cy="8.5" r="2" fill="#facc15" />
+            </svg>
+            <svg v-else-if="currentInvoice.client.company.toLowerCase().includes('arbisoft')" class="w-8 h-8" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" fill="#140f1a" stroke="#7c3aed" stroke-width="1" />
+              <path d="M18 8L27 13.5V23.5L18 29L9 23.5V13.5L18 8Z" stroke="#e11d48" stroke-width="1.5" fill="none" />
+              <path d="M18 8V18L27 23.5" stroke="#9333ea" stroke-width="1.5" />
+              <path d="M18 18L9 23.5" stroke="#38bdf8" stroke-width="1.5" />
+              <circle cx="18" cy="18" r="2" fill="#ffffff" />
+            </svg>
+            <svg v-else class="w-8 h-8" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" fill="#081414" stroke="#059669" stroke-width="1" />
+              <circle cx="14" cy="18" r="6.5" stroke="#10b981" stroke-width="2" fill="none" />
+              <circle cx="22" cy="18" r="6.5" stroke="#06b6d4" stroke-width="2" fill="none" />
+              <circle cx="18" cy="18" r="1.8" fill="#a7f3d0" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-[10px] text-slate-400 uppercase font-mono font-bold block">BILLED COUNTERPARTY</span>
+            <div class="font-bold text-white text-sm font-sans">{{ currentInvoice.client.company }}</div>
+            <div class="text-slate-400 font-sans">Attn: {{ currentInvoice.client.name }}</div>
+            <div class="text-slate-400 font-mono text-[11px]">{{ currentInvoice.client.email }}</div>
+          </div>
+        </div>
 
-      <!-- Itemized Overview -->
-      <div class="rounded border border-zinc-800 bg-[#141622] p-3.5 mb-4 text-xs space-y-2">
-        <div class="font-medium text-zinc-300 border-b border-zinc-800 pb-2 flex justify-between">
-          <span>Deliverables / Billed Services</span>
-          <span class="font-mono text-zinc-400">Rate</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Microservice Engineering (Sprints 1-4)</span>
-          <span class="font-mono text-zinc-300">PKR 600,000.00</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>High-Availability Redis &amp; DB Clustering</span>
-          <span class="font-mono text-zinc-300">PKR 150,000.00</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Punjab Sales Tax (PRA @ 16%)</span>
-          <span class="font-mono text-zinc-300">PKR 120,000.00</span>
-        </div>
-      </div>
-
-      <!-- Banking Remittance Instructions -->
-      <div class="bg-[#141622] border border-zinc-800 rounded-md p-4 text-xs space-y-2.5 text-zinc-300 mb-6">
-        <div class="font-medium text-white flex items-center justify-between">
-          <span>Official Remittance Details (IBFT / RAAST)</span>
-          <span class="text-[10px] text-zinc-500 font-mono">HBL Corporate</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Account Title:</span>
-          <span class="text-zinc-200 font-medium">PayFlow Technologies (Pvt) Ltd</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Bank &amp; Branch:</span>
-          <span class="text-zinc-200">Habib Bank Limited (HBL) &mdash; Corporate Wing Lahore</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>Corporate IBAN:</span>
-          <span class="text-zinc-200 font-mono select-all">PK36HABB0001234567890123</span>
-        </div>
-        <div class="flex justify-between text-zinc-400">
-          <span>RAAST Instant ID:</span>
-          <span class="text-zinc-200 font-mono select-all">03446751031</span>
+        <div class="sm:text-right font-mono">
+          <span class="text-[10px] text-slate-500 uppercase font-bold block">TAX REGISTRATION</span>
+          <div class="text-blue-400 font-bold mt-0.5">{{ currentInvoice.client.tax_id || 'NTN-0814920-1' }}</div>
+          <div class="text-slate-400">PRA SALES TAX: 16.0% (PUNJAB)</div>
+          <div class="text-slate-500 text-[11px] truncate max-w-xs sm:ml-auto font-sans">{{ currentInvoice.client.address }}</div>
         </div>
       </div>
 
-      <div class="flex flex-col sm:flex-row gap-3">
+      <!-- Total Payable Big Card (Squared) -->
+      <div class="p-5 rounded-none bg-[#111520] border border-slate-800 mb-5">
+        <span class="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider block">TOTAL PAYABLE AMOUNT</span>
+        <div class="text-3xl sm:text-4xl font-extrabold text-white mt-1 font-mono tnum">
+          {{ currentInvoice.currency }} {{ Number(currentInvoice.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
+        </div>
+        <div class="text-xs text-slate-400 mt-1 font-mono">
+          Maturity terms: Net-30 &bull; Sales tax on services regulated under Punjab Revenue Authority (PRA) Act 2012
+        </div>
+      </div>
+
+      <!-- Itemized Deliverables Table (Squared) -->
+      <div class="mb-5">
+        <h3 class="font-mono text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">ITEMIZED DELIVERABLES</h3>
+        <div class="rounded-none border border-slate-800 overflow-hidden bg-slate-900">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-[#141926] text-slate-400 font-mono text-[10px] uppercase border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3">DESCRIPTION</th>
+                <th class="py-2.5 px-3 text-center">QTY</th>
+                <th class="py-2.5 px-3 text-right">UNIT RATE</th>
+                <th class="py-2.5 px-3 text-right">TOTAL</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800 font-mono">
+              <tr v-for="(it, idx) in currentInvoice.items" :key="idx">
+                <td class="py-2.5 px-3 text-slate-200 font-sans">{{ it.description }}</td>
+                <td class="py-2.5 px-3 text-center text-slate-400">{{ it.quantity }}</td>
+                <td class="py-2.5 px-3 text-right text-slate-400">PKR {{ Number(it.unit_price).toLocaleString() }}</td>
+                <td class="py-2.5 px-3 text-right text-white font-bold">
+                  PKR {{ Number(it.total || (it.quantity * it.unit_price)).toLocaleString() }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Financial Calculation Summary (Squared) -->
+      <div class="p-4 rounded-none bg-[#121622] border border-slate-800 space-y-2 font-mono text-xs mb-5">
+        <div class="flex justify-between text-slate-400">
+          <span>SUBTOTAL (NET SERVICES):</span>
+          <span class="text-slate-200">PKR {{ Number(currentInvoice.subtotal).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>PUNJAB SALES TAX (PRA @ 16%):</span>
+          <span class="text-slate-200">PKR {{ Number(currentInvoice.tax_amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+        </div>
+        <div class="flex justify-between text-white font-bold pt-2 border-t border-slate-800 text-sm">
+          <span>GRAND TOTAL DUE:</span>
+          <span class="text-emerald-400">PKR {{ Number(currentInvoice.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}</span>
+        </div>
+      </div>
+
+      <!-- Banking Remittance Slip (Squared) -->
+      <div class="rounded-none bg-[#0a0d14] border border-slate-800 p-4 text-xs space-y-2.5 mb-6">
+        <div class="flex items-center justify-between font-mono">
+          <span class="font-bold text-slate-300 uppercase text-[11px]">OFFICIAL BANK REMITTANCE VOUCHER</span>
+          <span class="text-[10px] text-blue-400">HBL IBFT / RAAST</span>
+        </div>
+        
+        <div class="flex justify-between text-slate-400 font-mono text-[11px]">
+          <span>BENEFICIARY ACCOUNT:</span>
+          <span class="text-slate-200 font-semibold">PayFlow Technologies (Pvt) Ltd</span>
+        </div>
+
+        <div class="flex items-center justify-between p-2 rounded-none bg-black/40 font-mono text-xs border border-slate-800">
+          <div>
+            <span class="text-[10px] text-slate-500 uppercase block">CORPORATE IBAN (HBL PAKISTAN)</span>
+            <span class="text-slate-200 font-bold">PK36HABB0001234567890123</span>
+          </div>
+          <button @click="copyText('PK36HABB0001234567890123', 'iban')" 
+                  class="px-2 py-1 rounded-none border border-slate-700 hover:border-slate-500 text-slate-300 font-mono text-[11px]">
+            {{ copied === 'iban' ? 'COPIED' : 'COPY' }}
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between p-2 rounded-none bg-black/40 font-mono text-xs border border-slate-800">
+          <div>
+            <span class="text-[10px] text-slate-500 uppercase block">RAAST INSTANT PAY ID</span>
+            <span class="text-slate-200 font-bold">03446751031</span>
+          </div>
+          <button @click="copyText('03446751031', 'raast')" 
+                  class="px-2 py-1 rounded-none border border-slate-700 hover:border-slate-500 text-slate-300 font-mono text-[11px]">
+            {{ copied === 'raast' ? 'COPIED' : 'COPY' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Action Buttons (Squared) -->
+      <div class="flex flex-col sm:flex-row gap-2.5 font-mono text-xs">
         <button @click="markSettled"
-                :disabled="invoice.status === 'PAID'"
-                class="flex-1 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs py-2.5 rounded-md transition shadow-sm">
-          {{ invoice.status === 'PAID' ? 'Payment Reconciled' : 'Confirm Remittance via RAAST' }}
+                :disabled="currentInvoice.status === 'PAID'"
+                class="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-2.5 rounded-none border border-blue-400/40 transition flex items-center justify-center gap-2">
+          <span>{{ currentInvoice.status === 'PAID' ? '✓ SETTLED & RECONCILED' : 'CONFIRM REMITTANCE VIA RAAST' }}</span>
         </button>
-        <a :href="`http://localhost:8000/api/v1/invoices/${invoice.id}/pdf`" 
-           target="_blank"
+
+        <a :href="`http://localhost:8000/api/v1/invoices/${currentInvoice.id}/pdf`" 
+           target="_blank" 
            rel="noopener noreferrer"
-           class="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-medium rounded-md transition text-center inline-flex items-center justify-center gap-1.5">
-          <span>View &amp; Print PDF</span>
-          <span class="text-[10px]">↗</span>
+           class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold rounded-none transition text-center flex items-center justify-center gap-1.5">
+          <span>REPORTLAB PDF ↗</span>
         </a>
       </div>
+
     </div>
 
-    <!-- Notification Toast -->
-    <div v-if="toast" class="fixed bottom-5 right-5 bg-zinc-900 border border-zinc-700 text-zinc-100 px-4 py-2.5 rounded-md shadow-2xl text-xs font-medium flex items-center gap-2">
-      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-      <span>{{ toast }}</span>
+    <!-- Portal Compliance & Access Notice -->
+    <div class="mt-4 pt-3 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-slate-500 gap-2">
+      <div class="flex items-center gap-2">
+        <span class="w-1.5 h-1.5 bg-blue-500"></span>
+        <span>PayFlow Remittance Desk &bull; Counterparty Portal</span>
+      </div>
+      <div>
+        Registration restricted &bull; For access requests: <a href="mailto:admin@payflow.pk" class="text-sky-400 hover:underline">admin@payflow.pk</a>
+      </div>
     </div>
+
   </div>
 
   <script>
     const { createApp, ref, onMounted } = Vue;
+    const API_BASE = "http://localhost:8000/api/v1";
 
     createApp({
       setup() {
-        const invoice = ref({
+        const allInvoices = ref([]);
+        const currentInvoice = ref({
           id: 1,
-          number: "INV-2026-0001",
+          invoice_number: "INV-2026-0001",
+          client: {
+            company: "Systems Limited",
+            name: "Asif Peer",
+            email: "accounts@systemsltd.com",
+            tax_id: "NTN-0814920-1",
+            address: "DHA Phase 1, Lahore"
+          },
           status: "PAID",
+          issue_date: "2026-09-20",
+          due_date: "2026-10-05",
           currency: "PKR",
-          total: 870000,
-          dueDate: "2026-10-05"
+          subtotal: 750000,
+          tax_rate: 0.16,
+          tax_amount: 120000,
+          total_amount: 870000,
+          notes: "Quarterly Kubernetes Cluster & FastAPI Consultation",
+          items: [
+            { description: "Microservice Engineering (Sprints 1-4)", quantity: 4, unit_price: 150000, total: 600000 },
+            { description: "High-Availability Redis & DB Clustering", quantity: 1, unit_price: 150000, total: 150000 }
+          ]
         });
 
         const toast = ref('');
+        const copied = ref('');
 
-        onMounted(() => {
-          fetch("http://localhost:8000/api/v1/invoices/1")
+        const formatDate = (d) => {
+          if (!d) return '';
+          return d.slice(0, 10);
+        };
+
+        const copyText = (text, key) => {
+          navigator.clipboard?.writeText(text);
+          copied.value = key;
+          toast.value = `Copied ${text}`;
+          setTimeout(() => { copied.value = ''; }, 2000);
+          setTimeout(() => { toast.value = ''; }, 3500);
+        };
+
+        const loadInvoice = (id) => {
+          fetch(`${API_BASE}/invoices/${id}`)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
-              if (data) {
-                invoice.value = {
-                  id: data.id,
-                  number: data.invoice_number,
-                  status: data.status,
-                  currency: data.currency,
-                  total: data.total_amount,
-                  dueDate: data.due_date ? data.due_date.slice(0, 10) : "2026-10-05"
-                };
+              if (data && data.id) {
+                currentInvoice.value = data;
               }
             })
             .catch(() => {});
+        };
+
+        const selectInvoice = (id) => {
+          loadInvoice(id);
+          const url = new URL(window.location);
+          url.searchParams.set('id', id);
+          window.history.pushState({}, '', url);
+        };
+
+        onMounted(() => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const requestedId = parseInt(urlParams.get('id') || urlParams.get('invoice')) || 1;
+
+          fetch(`${API_BASE}/invoices/`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data && Array.isArray(data) && data.length > 0) {
+                allInvoices.value = data;
+                const found = data.find(i => i.id === requestedId) || data[0];
+                currentInvoice.value = found;
+              }
+            })
+            .catch(() => {
+              loadInvoice(requestedId);
+            });
         });
 
         const markSettled = () => {
-          fetch(`http://localhost:8000/api/v1/invoices/${invoice.value.id}/status`, {
+          fetch(`${API_BASE}/invoices/${currentInvoice.value.id}/status`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'PAID' })
           })
+          .then(res => res.ok ? res.json() : null)
+          .then(updated => {
+            if (updated) currentInvoice.value = updated;
+            else currentInvoice.value.status = "PAID";
+          })
+          .catch(() => {
+            currentInvoice.value.status = "PAID";
+          })
           .finally(() => {
-            invoice.value.status = "PAID";
-            toast.value = "Remittance confirmed. Financial ledger updated.";
+            toast.value = "Remittance confirmed. Financial ledger reconciled.";
+            allInvoices.value = allInvoices.value.map(i => 
+              i.id === currentInvoice.value.id ? { ...i, status: 'PAID' } : i
+            );
             setTimeout(() => { toast.value = ''; }, 3500);
           });
         };
 
         return {
-          invoice,
+          allInvoices,
+          currentInvoice,
           toast,
+          copied,
+          copyText,
+          formatDate,
+          selectInvoice,
           markSettled
         };
       }
